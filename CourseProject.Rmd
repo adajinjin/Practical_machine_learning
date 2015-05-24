@@ -25,9 +25,9 @@ trainLift <- trainingset1[inTrain,];testLift <- trainingset1[-inTrain,]
 featureplot(x = , y = , plot = "paires")
 library(caret)
 modfit <- train(classe~., method = "rpart",data = trainLift)
-plot(modFit$finalModel, uniform = TRUE, main = "classification Tree")
-text(modFit$finalModel, use.n = TRUE, all = TRUE, cex = .8)
-predict(modFit,newdata = testLift)
+plot(modfit$finalModel, uniform = TRUE, main = "classification Tree")
+text(modfit$finalModel, use.n = TRUE, all = TRUE, cex = .8)
+predict(modfit,newdata = testLift)
 ```
 
 ### 
