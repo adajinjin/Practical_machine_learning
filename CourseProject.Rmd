@@ -1,0 +1,154 @@
+---
+title: "Machine Learning Project"
+date: "Jun 20th, 2015"
+output: html_document
+---
+## Summary
+
+### reading of the source data and subset variables with meaningful values
+```{r}
+setwd("/Users/yangjin84/coursera/Practical_Machine_Learning")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","training.csv","curl")
+download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv","testing.csv","curl")
+trainingset <- read.csv("training.csv")
+testingset <- read.csv("testing.csv")
+trainingset1 <- subset(trainingset,select = c(user_name, roll_belt, pitch_belt, yaw_belt, total_accel_belt,gyros_belt_x, gyros_belt_y, gyros_belt_z, accel_belt_x, accel_belt_y, accel_belt_z, magnet_belt_x, magnet_belt_y, magnet_belt_z,roll_arm, pitch_arm, yaw_arm, total_accel_arm,gyros_arm_x, gyros_arm_y, gyros_arm_z, accel_arm_x, accel_arm_y, accel_arm_z, magnet_arm_x, magnet_arm_y, magnet_arm_z,roll_dumbbell, pitch_dumbbell, yaw_dumbbell, total_accel_dumbbell,gyros_dumbbell_x, gyros_dumbbell_y, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, accel_dumbbell_z, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, roll_forearm, pitch_forearm, yaw_forearm, total_accel_forearm,gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_y, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, magnet_forearm_z,classe))
+trainingset_carlitos <- trainingset1[trainingset1$user_name == "carlitos",]
+trainingset_pedro <- trainingset1[trainingset1$user_name == "pedro",]
+trainingset_adelmo <- trainingset1[trainingset1$user_name == "adelmo",]
+trainingset_charles <- trainingset1[trainingset1$user_name == "charles",]
+trainingset_eurico <- trainingset1[trainingset1$user_name == "eurico",]
+trainingset_jeremy <- trainingset1[trainingset1$user_name == "jeremy",]
+testingset1 <- subset(testingset,select = c(user_name, roll_belt, pitch_belt, yaw_belt, total_accel_belt,gyros_belt_x, gyros_belt_y, gyros_belt_z, accel_belt_x, accel_belt_y, accel_belt_z, magnet_belt_x, magnet_belt_y, magnet_belt_z,roll_arm, pitch_arm, yaw_arm, total_accel_arm,gyros_arm_x, gyros_arm_y, gyros_arm_z, accel_arm_x, accel_arm_y, accel_arm_z, magnet_arm_x, magnet_arm_y, magnet_arm_z,roll_dumbbell, pitch_dumbbell, yaw_dumbbell, total_accel_dumbbell,gyros_dumbbell_x, gyros_dumbbell_y, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, accel_dumbbell_z, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, roll_forearm, pitch_forearm, yaw_forearm, total_accel_forearm,gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_y, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, magnet_forearm_z))
+```
+
+### Load package caret and conduct machine learning on the training dataset.
+- Note that the variable "Class" is a non-numeric variable. I can use classical forest or random forest method for it.
+-- Based on the calculation, the misclassification rate for classical forest is ~0.4, so I choose random forest method instead.
+```{r}
+library(ggplot2)
+library(lattice)
+library(caret)
+library(rattle)
+```
+
+- Using caret package function "feaurePlot", the relationship between each variable and the classe variable can be plotted. See below for an example.
+```{r}
+trainingset_adelmo2 <- trainingset_adelmo
+trainingset_adelmo2$classe <- as.numeric(trainingset_adelmo2$classe)
+featurePlot(x = trainingset_adelmo2[,c("roll_belt","pitch_belt","yaw_belt")], y = trainingset_adelmo2$classe, plot = "pairs")
+```
+
+
+
+- Based on the plots, for each user_name, different variables were decided to be the major contributing variables in terms of classe determination. Take user Adelmo for an example:
+
+```{r}
+adelmo <- subset(trainingset_adelmo,select = c(roll_belt, accel_belt_x, accel_belt_z, magnet_belt_z, roll_arm, pitch_arm, gyros_arm_z, accel_arm_y, total_accel_arm, magnet_belt_y, pitch_dumbbell, gyros_dumbbell_z, accel_belt_x, magnet_dumbbell_x, gyros_forearm_z, accel_forearm_z, total_accel_forearm, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = adelmo$classe,p = 0.7,list = FALSE)
+trainadelmo <- adelmo[inTrain,];testadelmo <- adelmo[-inTrain,]
+modFit <- train(classe~., method = "rf",data = trainadelmo, prox=TRUE)
+modFit
+testresult <- predict(modFit,newdata = testadelmo)
+Totalfaulseprediction <- sum(testresult != testadelmo$classe)
+total <- length(testadelmo$classe)
+misclassificationrate <- Totalfaulseprediction/total
+```
+
+The misclassificationrate is quite small (`r misclassificationrate `), so this method is valid.
+Same method was used for the rest of tainingdata. Due to the word limit and the time limit to run the random forest model, the process is omitted here. The detailed r program is stored in appendix.
+
+
+- To predict the classe of testset, each sub-testingdataset with 6 different user names were predicted. Please note that because the misclassificationrates for username carlitos, charles, eurico, jeremy and pedro are quite small for the same set of variables, the testingset was only subset once.
+
+```{r}
+ans <-  rep(NA,20)
+testingsetadelmo <- subset(testingset1,select = c(user_name, roll_belt, accel_belt_x, accel_belt_z, magnet_belt_z, roll_arm, pitch_arm, gyros_arm_z, accel_arm_y, total_accel_arm, magnet_belt_y, pitch_dumbbell, gyros_dumbbell_z, accel_belt_x, magnet_dumbbell_x, gyros_forearm_z, accel_forearm_z, total_accel_forearm, magnet_forearm_z))
+for (i in 1:dim(testingsetadelmo)[1]){
+  if (testingsetadelmo$user_name[i]== "adelmo"){
+    ans[i] <- as.character(predict(modFit,newdata = testingsetadelmo[i,]))
+  }
+}
+ans
+```
+The same method was used for the rest of the data. Please see Appendix for detailed r program.
+The final answer is:
+[1] "B" "A" "B" "A" "A" "E" "D" "B" "A" "A" "B" "C" "B" "A" "E" "E" "A" "B" "B" "B"
+
+### Appendix
+--  Training for user_name carlitos, charles, eurico, jeremy, and pedro:
+r code:
+carlitos <- subset(trainingset_carlitos,select = c(yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = carlitos$classe,p = 0.7,list = FALSE)
+traincarlitos <- carlitos[inTrain,];testcarlitos <- carlitos[-inTrain,]
+modFit2 <- train(classe~., method = "rf",data = traincarlitos, prox=TRUE)
+testresult <- predict(modFit,newdata = testcarlitos)
+Totalfaulseprediction <- sum(testresult != testcarlitos$classe)
+total <- length(testcarlitos$classe)
+misclassificationrate <- Totalfaulseprediction/total
+
+charles <- subset(trainingset_charles,select = c(yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = charles$classe,p = 0.7,list = FALSE)
+traincharles <- charles[inTrain,];testcharles <- charles[-inTrain,]
+modFit3 <- train(classe~., method = "rf",data = traincharles, prox=TRUE)
+testresult <- predict(modFit,newdata = testcharles)
+Totalfaulseprediction <- sum(testresult != testcharles$classe)
+total <- length(testcharles$classe)
+misclassificationrate <- Totalfaulseprediction/total
+
+eurico <- subset(trainingset_eurico,select = c(yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = eurico$classe,p = 0.7,list = FALSE)
+traineurico <- eurico[inTrain,];testeurico <- eurico[-inTrain,]
+modFit4 <- train(classe~., method = "rf",data = traineurico, prox=TRUE)
+testresult <- predict(modFit,newdata = testeurico)
+Totalfaulseprediction <- sum(testresult != testeurico$classe)
+total <- length(testeurico$classe)
+misclassificationrate <- Totalfaulseprediction/total
+
+jeremy <- subset(trainingset_jeremy,select = c(yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = jeremy$classe,p = 0.7,list = FALSE)
+trainjeremy <- jeremy[inTrain,];testjeremy <- jeremy[-inTrain,]
+modFit5 <- train(classe~., method = "rf",data = trainjeremy, prox=TRUE)
+testresult <- predict(modFit,newdata = testjeremy)
+Totalfaulseprediction <- sum(testresult != testjeremy$classe)
+total <- length(testjeremy$classe)
+misclassificationrate <- Totalfaulseprediction/total
+
+pedro <- subset(trainingset_pedro,select = c(yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z,classe))
+inTrain <- createDataPartition(y = pedro$classe,p = 0.7,list = FALSE)
+trainpedro <- pedro[inTrain,];testpedro <- pedro[-inTrain,]
+modFit6 <- train(classe~., method = "rf",data = trainpedro, prox=TRUE)
+testresult <- predict(modFit,newdata = testpedro)
+Totalfaulseprediction <- sum(testresult != testpedro$classe)
+total <- length(testpedro$classe)
+misclassificationrate <- Totalfaulseprediction/total
+
+-- Prediction of testingset using the created modFiti model:
+r code:
+testingsetcarlitos <- subset(testingset1,select = c(user_name, yaw_belt, accel_belt_x, accel_belt_z, magnet_belt_x, roll_arm, pitch_arm, accel_arm_z, total_accel_arm, magnet_arm_z, pitch_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, accel_dumbbell_x, accel_dumbbell_y,total_accel_dumbbell, magnet_dumbbell_z, roll_forearm, pitch_forearm, gyros_forearm_z, accel_forearm_x, total_accel_forearm, magnet_forearm_x, magnet_forearm_z))
+for (i in 1:dim(testingsetcarlitos)[1]){
+  if (testingsetcarlitos$user_name[i]== "carlitos"){
+    ans[i] <- as.character(predict(modFit2,newdata = testingsetcarlitos[i,]))
+  }
+}
+for (i in 1:dim(testingsetcarlitos)[1]){
+  if (testingsetcarlitos$user_name[i]== "charles"){
+    ans[i] <- as.character(predict(modFit3,newdata = testingsetcarlitos[i,]))
+  }
+}
+for (i in 1:dim(testingsetcarlitos)[1]){
+  if (testingsetcarlitos$user_name[i]== "eurico"){
+    ans[i] <- as.character(predict(modFit4,newdata = testingsetcarlitos[i,]))
+  }
+}
+for (i in 1:dim(testingsetcarlitos)[1]){
+  if (testingsetcarlitos$user_name[i]== "jeremy"){
+    ans[i] <- as.character(predict(modFit5,newdata = testingsetcarlitos[i,]))
+  }
+}
+for (i in 1:dim(testingsetcarlitos)[1]){
+  if (testingsetcarlitos$user_name[i]== "pedro"){
+    ans[i] <- as.character(predict(modFit6,newdata = testingsetcarlitos[i,]))
+  }
+}
+
